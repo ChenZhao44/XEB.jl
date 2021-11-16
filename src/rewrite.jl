@@ -59,17 +59,17 @@ function simplify!(g, cuts)
     return simplify!(g)
 end
 
-function my_cut_53(d_start, d_end, nbits = 53, depth = 20)
-    g = google_layout_53(nbits, depth)
+function my_cut_53(d_start, d_end, nbits = 53, ncycle = 20)
+    g = google_layout_53(nbits, ncycle)
+    d_end > ncycle && (d_end = ncycle)
     vs_cut = [1, 2, 4, 6, 11, 12, 47, 51]
     filter!(x -> x <= nv(g), vs_cut)
     cuts = []
     for c in d_start:d_end
         for v1 in vs_cut
             v2 = partner(g, v1, c)
-            if v2 in vs_cut
-                push!(cuts, (v1, 2*(c-1)+1))
-                push!(cuts, (v2, 2*(c-1)+1))
+            if v2 in vs_cut && v1 < v2
+                push!(cuts, (v1, 2*(c-1)+1), (v2, 2*(c-1)+1))
             end
         end
     end

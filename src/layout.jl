@@ -26,7 +26,7 @@ function google_layout_53(nbits = 53, ncycle = 20)
         set_prop!(g, v, :gates, [])
     end
     if ncycle >= 1
-        for i = 1:ncycle-1
+        for i = 1:ncycle
             for v in vertices(g)
                 push!(get_prop(g, v, :gates), :single)
                 if has_partner(g, v, i)
