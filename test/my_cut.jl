@@ -24,14 +24,15 @@ xebs_L = Float64[]
 xebs_R = Float64[]
 xebs = Float64[]
 
-for i = 1:1000
+for i = 1:100
     g = google_layout_53(53, 20);
     cuts = XEB.my_cut_53(1, 20, 53, 20)
     XEB.simplify!(g, cuts);
-    _, ts_L, _ = to_ein_code(g, L)
-    _, ts_R, _ = to_ein_code(g, R)
+    _, ts_L, _ = to_ein_code(g, L; haar = true)
+    _, ts_R, _ = to_ein_code(g, R; haar = true)
     p_L = ec_L_opt(ts_L...);
     p_R = ec_R_opt(ts_R...);
+    # @show sum(p_L), sum(p_R)
     # p_L = p_L / sum(p_L);
     # p_R = p_R / sum(p_R);
     xeb_L = 2^(length(ec_L.iy))*sum(p_L .* p_L) - 1
