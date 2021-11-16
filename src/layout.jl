@@ -2,6 +2,12 @@ using LinearAlgebra
 using Graphs
 using OMEinsum
 
+@enum SCGate begin 
+    Single
+    FSim
+    Id
+    Noise
+end
 struct RQCLayout{VT, PT, GT}
     g::SimpleGraph{VT}
     edge_patterns::Dict{Edge{VT}, PT}
@@ -25,6 +31,29 @@ Base.deepcopy(layout::RQCLayout{VT, PT, GT}) where {VT, PT, GT} =
 Graphs.vertices(layout::RQCLayout) = vertices(layout.g)
 Graphs.has_vertex(layout::RQCLayout, v) = has_vertex(layout.g, v)
 Graphs.neighbors(layout::RQCLayout, v) = neighbors(layout.g, v)
+function Graphs.connected_components(g::RQCLayout{VT, PT, SCGate}) where {VT, PT}
+    vs_remain = Set(collect(vertices(g)))
+    comps = []
+    while !isempty(vs_remain)
+        v0 = pop!(vs_remain)
+        comp_v0 = [v0]
+        comp_remain = [v0]
+        while !isempty(comp_remain)
+            v = pop!(comp_remain)
+            gates_v = gates(g, v)
+            for i = 1:length(gates_v)
+                gates_v[i] === FSim || continue
+                u = partner(g, v, depth_to_cycle(i))
+                !(u in comp_v0) && push!(comp_remain, u)
+                !(u in comp_v0) && push!(comp_v0, u)
+                delete!(vs_remain, u)
+            end
+        end
+        push!(comps, sort!(comp_v0))
+    end
+    return sort!(comps; by = x -> first(x))
+end
+
 gates(layout::RQCLayout, v) = layout.gates[v]
 
 function google_layout_53(nbits::VT = 53, ncycles::Integer = 20) where {VT}
@@ -60,21 +89,21 @@ function google_layout_53(nbits::VT = 53, ncycles::Integer = 20) where {VT}
         edge_patterns[Edge(e)] = :D
     end
     
-    layout = RQCLayout{VT, Symbol, Symbol}(nbits, edge_patterns, pattern_loop)
+    layout = RQCLayout{VT, Symbol, SCGate}(nbits, edge_patterns, pattern_loop)
     if ncycles >= 1
         for i = 1:ncycles
             for v in vertices(layout)
-                push!(gates(layout, v), :single)
+                push!(gates(layout, v), Single)
                 if has_partner(layout, v, i)
-                    push!(gates(layout, v), :fsim)
+                    push!(gates(layout, v), FSim)
                 else
-                    push!(gates(layout, v), :id)
+                    push!(gates(layout, v), Id)
                 end
             end
         end
     end
     for v in vertices(layout)
-        push!(gates(layout, v), :single)
+        push!(gates(layout, v), Single)
     end
     return layout
 end

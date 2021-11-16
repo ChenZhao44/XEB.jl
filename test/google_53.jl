@@ -7,7 +7,7 @@ L = sort!([52, 37, 35, 32, 22, 11, 31, 21, 8, 24, 7, 1,
     29, 18, 5, 26, 15, 6, 40, 25, 16, 44, 42, 51, 53, 48, 46])
 R = setdiff(1:53, L)
 
-g = google_layout_53(53, 20);
+g = google_layout_53(53, 20)
 cuts = XEB.generate_cut(g, L, 1, 20)
 XEB.simplify!(g, cuts);
 ec_L, ts_L, ids_size_L = to_ein_code(g, L)
@@ -19,13 +19,15 @@ timespace_complexity(ec_L_opt, ids_size_L)
 ec_R_greedy = optimize_code(ec_R, ids_size_R, GreedyMethod())
 ec_R_opt = optimize_code(ec_R_greedy, ids_size_R, TreeSA())
 timespace_complexity(ec_R_opt, ids_size_R)
+@time ec_L_opt(ts_L...);
+@time ec_R_opt(ts_R...);
 xebs_L = Float64[]
 xebs_R = Float64[]
 xebs = Float64[]
 
 for i = 1:100
     g = google_layout_53(53, 20);
-    cuts = XEB.my_cut_53(1, 20, 53, 20)
+    cuts = XEB.generate_cut(g, L, 1, 20)
     XEB.simplify!(g, cuts);
     _, ts_L, _ = to_ein_code(g, L; haar = true)
     _, ts_R, _ = to_ein_code(g, R; haar = true)
@@ -43,7 +45,7 @@ for i = 1:100
     println("$(i): XEB_L = $(mean(xebs_L)), XEB_R = $(mean(xebs_R))")
 end
 
-# q_remain = findall(!isequal(:noise), [gates(g, v)[end] for v = 1:nv(g)])
+# q_remain = findall(!isequal(Noise), [gates(g, v)[end] for v = 1:nv(g)])
 # intersect(q_remain, L)
 # intersect(q_remain, R)
 

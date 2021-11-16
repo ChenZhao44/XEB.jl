@@ -51,7 +51,7 @@ function tensor_fsim()
     return tf
 end
 
-function to_ein_code(layout::RQCLayout{VT, PT, Symbol}, s = collect(vertices(layout)); haar = false) where {VT, PT}
+function to_ein_code(layout::RQCLayout{VT, PT, SCGate}, s = collect(vertices(layout)); haar = false) where {VT, PT}
     layout = deepcopy(layout)
     simplify!(layout)
     vs = sort!(intersect(s, collect(vertices(layout))))
@@ -62,9 +62,9 @@ function to_ein_code(layout::RQCLayout{VT, PT, Symbol}, s = collect(vertices(lay
     max_id = nbits
     tensors = Any[]
     for v in vs
-        if gates(layout, v)[1] === :noise
+        if gates(layout, v)[1] === Noise
             push!(tensors, sqrt(1/2)*tensor_noise())
-            gates(layout, v)[1] = :id
+            gates(layout, v)[1] = Id
         else
             push!(tensors, tensor_init())
         end
@@ -73,7 +73,7 @@ function to_ein_code(layout::RQCLayout{VT, PT, Symbol}, s = collect(vertices(lay
     D = length(gates(layout, 1))
     for d = 1:D
         for v in vs
-            if gates(layout, v)[d] === :single
+            if gates(layout, v)[d] === Single
                 ts, last_single[v] = tensor_single(last_single[v]; haar = haar)
                 max_id += 1
                 new_id_v = max_id
@@ -81,14 +81,14 @@ function to_ein_code(layout::RQCLayout{VT, PT, Symbol}, s = collect(vertices(lay
                 push!(tensor_ids, [open_ids_dict[v], new_id_v])
                 ids_size[new_id_v] = 4
                 open_ids_dict[v] = new_id_v
-            elseif gates(layout, v)[d] === :noise && d < D
+            elseif gates(layout, v)[d] === Noise && d < D
                 max_id += 1
                 new_id_v = max_id
                 push!(tensors, tensor_noise(), tensor_noise())
                 push!(tensor_ids, [open_ids_dict[v]], [new_id_v])
                 ids_size[new_id_v] = 4
                 open_ids_dict[v] = new_id_v
-            elseif gates(layout, v)[d] === :fsim
+            elseif gates(layout, v)[d] === FSim
                 c = depth_to_cycle(d)
                 u = partner(layout, v, c)
                 if u < v && u in vs
@@ -106,7 +106,7 @@ function to_ein_code(layout::RQCLayout{VT, PT, Symbol}, s = collect(vertices(lay
         end
     end
     for v in vs
-        if gates(layout, v)[end] === :noise
+        if gates(layout, v)[end] === Noise
             push!(tensors, sqrt(2)*tensor_noise())
             push!(tensor_ids, [open_ids_dict[v]])
             open_ids_dict[v] = 0
@@ -126,27 +126,4 @@ function to_ein_code(layout::RQCLayout{VT, PT, Symbol}, s = collect(vertices(lay
     end
     # return tensor_ids, open_ids
     return EinCode(tensor_ids, open_ids), tensors, ids_size
-end
-
-function conn_comps(g)
-    vs_remain = Set(collect(vertices(g)))
-    comps = []
-    while !isempty(vs_remain)
-        v0 = pop!(vs_remain)
-        comp_v0 = [v0]
-        comp_remain = [v0]
-        while !isempty(comp_remain)
-            v = pop!(comp_remain)
-            gates_v = gates(g, v)
-            for i = 1:length(gates_v)
-                gates_v[i] === :fsim || continue
-                u = partner(g, v, depth_to_cycle(i))
-                !(u in comp_v0) && push!(comp_remain, u)
-                !(u in comp_v0) && push!(comp_v0, u)
-                delete!(vs_remain, u)
-            end
-        end
-        push!(comps, comp_v0)
-    end
-    return comps
 end

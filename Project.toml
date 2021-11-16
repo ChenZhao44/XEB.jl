@@ -14,6 +14,7 @@ RandomMatrices = "2576dda1-a324-5b11-aa66-c48ed7e3c618"
 
 [compat]
 julia = "1.6"
+OMEinsumContractionOrders = "0.5.1"
 
 [extras]
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
