@@ -1,55 +1,92 @@
 using LinearAlgebra
-using Graphs, MetaGraphs
+using Graphs
 using OMEinsum
 
-const pattern_A = [(31,32),(21,22),(8,11),(24,29),(7,18),(1,5),(26,40),(15,25),
-    (6,16),(44,53),(42,48),(46,51),(4,14),(13,27),(28,39),(2,3),(9,17),
-    (23,30),(10,12),(19,20),(33,34),(41,47),(43,50),(45,49)]
-const pattern_B = [(32,37),(21,24),(18,26),(25,44),(22,35),(7,8),(5,15),(16,42),
-    (1,4),(2,6),(12,51), (14,36),(3,13),(9,10),(20,41),(27,38),(17,28),
-    (19,23),(34,43)]    
-const pattern_C = [(32,52),(24,31),(26,29),(40,44),(22,37),(7,21),(15,18),(25,42),
-    (11,35),(1,8),(5,6),(16,51),(3,4),(2,10),(12,41),(27,36),(13,17),(9,19),
-    (20,43),(38,39),(28,30),(23,33),(34,45)]
-const pattern_D = [(21,32),(18,24),(25,26),(44,48),(8,22),(5,7),(15,16),(42,46),
-    (4,11),(1,2),(6,12),(47,51),(13,14),(3,9),(10,20),(41,50),(27,28),
-    (17,23),(19,34),(43,49)]
+struct RQCLayout{VT, PT, GT}
+    g::SimpleGraph{VT}
+    edge_patterns::Dict{Edge{VT}, PT}
+    gates::Dict{VT, Vector{GT}}
+    pattern_loop::Vector{PT}
+end
 
-function google_layout_53(nbits = 53, ncycle = 20)
-    g = MetaGraph(nbits)
-    for (es, et) in ((pattern_A, :A), (pattern_B, :B), (pattern_C, :C), (pattern_D, :D))
-        for e in es
-            add_edge!(g, e) && set_prop!(g, e[1], e[2], :pattern, et)
-        end
+function RQCLayout{VT, PT, GT}(nbits::VT, edge_pattern::Dict{Edge{VT}, PT}, 
+        pattern_loop::Vector{PT}) where {VT, PT, GT}
+    g = SimpleGraph{VT}(nbits)
+    for (e, et) in edge_pattern
+        add_edge!(g, e)
     end
-    for v in vertices(g)
-        set_prop!(g, v, :gates, [])
+    gates = Dict(v => GT[] for v in vertices(g))
+    return RQCLayout{VT, PT, GT}(g, edge_pattern, gates, pattern_loop)
+end
+
+Base.deepcopy(layout::RQCLayout{VT, PT, GT}) where {VT, PT, GT} = 
+    RQCLayout{VT, PT, GT}(deepcopy(layout.g), deepcopy(layout.edge_patterns), 
+        deepcopy(layout.gates), deepcopy(layout.pattern_loop))
+Graphs.vertices(layout::RQCLayout) = vertices(layout.g)
+Graphs.has_vertex(layout::RQCLayout, v) = has_vertex(layout.g, v)
+Graphs.neighbors(layout::RQCLayout, v) = neighbors(layout.g, v)
+gates(layout::RQCLayout, v) = layout.gates[v]
+
+function google_layout_53(nbits::VT = 53, ncycles::Integer = 20) where {VT}
+    edge_patterns = Dict{Edge{VT}, Symbol}()
+    pattern_A = ((31,32),(21,22),(8,11),(24,29),(7,18),(1,5),(26,40),(15,25),
+        (6,16),(44,53),(42,48),(46,51),(4,14),(13,27),(28,39),(2,3),(9,17),
+        (23,30),(10,12),(19,20),(33,34),(41,47),(43,50),(45,49))
+    pattern_B = ((32,37),(21,24),(18,26),(25,44),(22,35),(7,8),(5,15),(16,42),
+        (1,4),(2,6),(12,51), (14,36),(3,13),(9,10),(20,41),(27,38),(17,28),
+        (19,23),(34,43))
+    pattern_C = ((32,52),(24,31),(26,29),(40,44),(22,37),(7,21),(15,18),(25,42),
+        (11,35),(1,8),(5,6),(16,51),(3,4),(2,10),(12,41),(27,36),(13,17),(9,19),
+        (20,43),(38,39),(28,30),(23,33),(34,45))
+    pattern_D = ((21,32),(18,24),(25,26),(44,48),(8,22),(5,7),(15,16),(42,46),
+        (4,11),(1,2),(6,12),(47,51),(13,14),(3,9),(10,20),(41,50),(27,28),
+        (17,23),(19,34),(43,49))
+    pattern_loop = [:A, :B, :C, :D, :C, :D, :A, :B]
+    
+    for e in pattern_A
+        e[1] < e[2] || error("$e")
+        edge_patterns[Edge(e)] = :A
     end
-    if ncycle >= 1
-        for i = 1:ncycle
-            for v in vertices(g)
-                push!(get_prop(g, v, :gates), :single)
-                if has_partner(g, v, i)
-                    push!(get_prop(g, v, :gates), :fsim)
+    for e in pattern_B
+        e[1] < e[2] || error("$e")
+        edge_patterns[Edge(e)] = :B
+    end
+    for e in pattern_C
+        e[1] < e[2] || error("$e")
+        edge_patterns[Edge(e)] = :C
+    end
+    for e in pattern_D
+        e[1] < e[2] || error("$e")
+        edge_patterns[Edge(e)] = :D
+    end
+    
+    layout = RQCLayout{VT, Symbol, Symbol}(nbits, edge_patterns, pattern_loop)
+    if ncycles >= 1
+        for i = 1:ncycles
+            for v in vertices(layout)
+                push!(gates(layout, v), :single)
+                if has_partner(layout, v, i)
+                    push!(gates(layout, v), :fsim)
                 else
-                    push!(get_prop(g, v, :gates), :id)
+                    push!(gates(layout, v), :id)
                 end
             end
         end
-        for v in vertices(g)
-            push!(get_prop(g, v, :gates), :single)
-        end
     end
-    return g
+    for v in vertices(layout)
+        push!(gates(layout, v), :single)
+    end
+    return layout
 end
 
-pattern_type(ncycle) = getindex((:A, :B, :C, :D, :C, :D, :A, :B), rem(ncycle-1,8)+1)
-function partner(g, v, ncycle)
-    pt = pattern_type(ncycle)
-    nbs = neighbors(g, v)
-    idx = findfirst(u -> get_prop(g, v, u, :pattern) === pt, nbs)
+cycle_pattern(layout::RQCLayout, ncycles) = getindex(layout.pattern_loop, rem(ncycles-1, length(layout.pattern_loop))+1)
+edge_pattern(layout::RQCLayout, u, v) = layout.edge_patterns[Edge(min(u, v), max(u, v))]
+function partner(layout::RQCLayout, v, ncycles)
+    pt = cycle_pattern(layout, ncycles)
+    nbs = neighbors(layout, v)
+    idx = findfirst(u -> edge_pattern(layout, u, v) === pt, nbs)
     idx !== nothing && return nbs[idx]
     return nothing
 end
-has_partner(g, v, ncycle) = (partner(g, v, ncycle) !== nothing)
-gates(g, v) = get_prop(g, v, :gates)
+has_partner(g, v, ncycles) = (partner(g, v, ncycles) !== nothing)
+depth_to_cycle(d) = d÷2

@@ -3,17 +3,17 @@ uuid = "60aca0be-a053-4cd2-bc2d-9796ced27034"
 authors = ["Chen Zhao <zhaochen17@mails.ucas.ac.cn> and contributors"]
 version = "0.1.0"
 
-[compat]
-julia = "1.6"
-
 [deps]
 GraphPlot = "a2cc645c-3eea-5389-862e-a155d0052231"
 Graphs = "86223c79-3864-5bf0-83f7-82e725a168b6"
 KaHyPar = "2a6221f6-aa48-11e9-3542-2d9e0ef01880"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
-MetaGraphs = "626554b9-1ddb-594c-aa3c-2596fe9399a5"
 OMEinsum = "ebe7aa44-baf0-506c-a96f-8464559b3922"
 OMEinsumContractionOrders = "6f22d1fd-8eed-4bb7-9776-e7d684900715"
+RandomMatrices = "2576dda1-a324-5b11-aa66-c48ed7e3c618"
+
+[compat]
+julia = "1.6"
 
 [extras]
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"

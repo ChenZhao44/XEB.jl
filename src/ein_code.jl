@@ -2,28 +2,31 @@ using RandomMatrices
 
 tensor_init() = Float64[1, 0, 0, 1] / sqrt(2)
 tensor_measure() = (1/sqrt(2))*Float64[1 1; 0 0; 0 0; 1 -1]
-function tensor_single(g = :null)
-    g === :null && (new_g = rand((:sx, :sy, :sw)))
-    g === :sx && (new_g = rand((:sy, :sw)))
-    g === :sy && (new_g = rand((:sx, :sw)))
-    g === :sw && (new_g = rand((:sx, :sy)))
-
+function tensor_single(g_prev = :null; haar = false)
     I = [1 0; 0 1]
     X = [0 1; 1 0]
     Y = [0 -im; im 0]
     Z = [1 0; 0 -1]
     paulis = (I, X, Y, Z)
-    new_g === :sx && (M = sqrt(X))
-    new_g === :sy && (M = sqrt(Y))
-    new_g === :sw && (M = sqrt(sqrt(1/2)*(X+Y)))
-    M = [1 0; 0 exp(rand()*2π*im)]*M*[1 0; 0 exp(rand()*2π*im)]
-    M = rand(Haar(2), 2)    # Haar random matrix
+    if haar
+        M = rand(Haar(2), 2)
+        g_new = :null
+    else    # Haar random matrix
+        g_prev === :null && (g_new = rand((:sx, :sy, :sw)))
+        g_prev === :sx && (g_new = rand((:sy, :sw)))
+        g_prev === :sy && (g_new = rand((:sx, :sw)))
+        g_prev === :sw && (g_new = rand((:sx, :sy)))
+
+        g_new === :sx && (M = sqrt(X))
+        g_new === :sy && (M = sqrt(Y))
+        g_new === :sw && (M = sqrt(sqrt(1/2)*(X+Y)))
+        M = [1 0; 0 exp(rand()*2π*im)]*M*[1 0; 0 exp(rand()*2π*im)]
+    end
     ts = zeros(Float64, 4, 4)
-    
     for i = 1:4, j = 1:4
         ts[i, j] = real(tr(M*paulis[i]*M'*paulis[j]/2))
     end
-    return ts, new_g
+    return ts, g_new
 end
 function tensor_noise()
     tn = zeros(Float64, 4)
@@ -48,10 +51,10 @@ function tensor_fsim()
     return tf
 end
 
-function to_ein_code(g, s = collect(vertices(g)))
-    g = deepcopy(g)
-    simplify!(g)
-    vs = sort!(intersect(s, collect(vertices(g))))
+function to_ein_code(layout::RQCLayout{VT, PT, Symbol}, s = collect(vertices(layout)); haar = false) where {VT, PT}
+    layout = deepcopy(layout)
+    simplify!(layout)
+    vs = sort!(intersect(s, collect(vertices(layout))))
     nbits = length(vs)
     ids_size = Dict{Int, Int}(i => 4 for i in 1:nbits)
     open_ids_dict = Dict(vs[i] => i for i = 1:nbits)
@@ -59,35 +62,35 @@ function to_ein_code(g, s = collect(vertices(g)))
     max_id = nbits
     tensors = Any[]
     for v in vs
-        if gates(g, v)[1] === :noise
+        if gates(layout, v)[1] === :noise
             push!(tensors, sqrt(1/2)*tensor_noise())
-            gates(g, v)[1] = :id
+            gates(layout, v)[1] = :id
         else
             push!(tensors, tensor_init())
         end
     end
     last_single = Dict(vs[i] => :null for i = 1:nbits)
-    D = length(gates(g, 1))
+    D = length(gates(layout, 1))
     for d = 1:D
         for v in vs
-            if gates(g, v)[d] === :single
-                ts, last_single[v] = tensor_single(last_single[v])
+            if gates(layout, v)[d] === :single
+                ts, last_single[v] = tensor_single(last_single[v]; haar = haar)
                 max_id += 1
                 new_id_v = max_id
                 push!(tensors, ts)
                 push!(tensor_ids, [open_ids_dict[v], new_id_v])
                 ids_size[new_id_v] = 4
                 open_ids_dict[v] = new_id_v
-            elseif gates(g, v)[d] === :noise && d < D
+            elseif gates(layout, v)[d] === :noise && d < D
                 max_id += 1
                 new_id_v = max_id
                 push!(tensors, tensor_noise(), tensor_noise())
                 push!(tensor_ids, [open_ids_dict[v]], [new_id_v])
                 ids_size[new_id_v] = 4
                 open_ids_dict[v] = new_id_v
-            elseif gates(g, v)[d] === :fsim
-                c = d÷2
-                u = partner(g, v, c)
+            elseif gates(layout, v)[d] === :fsim
+                c = depth_to_cycle(d)
+                u = partner(layout, v, c)
                 if u < v && u in vs
                     max_id += 2
                     new_id_u = max_id - 1
@@ -103,7 +106,7 @@ function to_ein_code(g, s = collect(vertices(g)))
         end
     end
     for v in vs
-        if gates(g, v)[end] === :noise
+        if gates(layout, v)[end] === :noise
             push!(tensors, sqrt(2)*tensor_noise())
             push!(tensor_ids, [open_ids_dict[v]])
             open_ids_dict[v] = 0
@@ -137,7 +140,7 @@ function conn_comps(g)
             gates_v = gates(g, v)
             for i = 1:length(gates_v)
                 gates_v[i] === :fsim || continue
-                u = partner(g, v, i÷2)
+                u = partner(g, v, depth_to_cycle(i))
                 !(u in comp_v0) && push!(comp_remain, u)
                 !(u in comp_v0) && push!(comp_v0, u)
                 delete!(vs_remain, u)

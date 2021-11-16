@@ -1,24 +1,23 @@
-function add_noise!(g, v, d) 
-    if gates(g, v)[d] !== :fsim
-        gates(g, v)[d] = :noise
+function add_noise!(layout::RQCLayout{VT, PT, Symbol}, v, d) where {VT, PT}
+    if gates(layout, v)[d] !== :fsim
+        gates(layout, v)[d] = :noise
         return true
     end
     return false
 end
-function update_noise!(g)
+function update_noise!(layout::RQCLayout{VT, PT, Symbol}) where {VT, PT}
     to_update = true
     while to_update
         to_update = false
-        for v in vertices(g)
-            gates_v = gates(g, v)
+        for v in vertices(layout)
+            gates_v = gates(layout, v)
             for i in 1:length(gates_v)
                 gates_v[i] === :noise || continue
                 for j in (i-1, i+1)
                     1 <= j <= length(gates_v) || continue
                     if gates_v[j] === :fsim
-                        ncycle = j÷2
-                        u = partner(g, v, ncycle)
-                        gates_u = gates(g, u)
+                        u = partner(layout, v, depth_to_cycle(j))
+                        gates_u = gates(layout, u)
                         if :noise in (gates_u[i], gates_u[2j-i], gates_v[2j-i])
                             gates_v[j] = :noise
                             gates_u[j] = :noise
@@ -32,42 +31,42 @@ function update_noise!(g)
             end
         end
     end
-    return g
+    return layout
 end
-function update_id!(g)
-    for v in vertices(g)
-        gates_v = gates(g, v)
+function update_id!(layout::RQCLayout{VT, PT, Symbol}) where {VT, PT}
+    for v in vertices(layout)
+        gates_v = gates(layout, v)
         for i = 1:(length(gates_v)-1)
             if gates_v[i] === :noise && gates_v[i+1] === :noise
                 i > 1 && (gates_v[i] = :id)
             end
         end
     end
-    for v in vertices(g)
-        gates_v = gates(g, v)
+    for v in vertices(layout)
+        gates_v = gates(layout, v)
         if gates_v[1] === :noise && gates_v[2] === :noise
             gates_v[2] = :id
         end
     end
-    return g
+    return layout
 end
-simplify!(g) = update_id!(update_noise!(g))
-function simplify!(g, cuts)
+simplify!(layout::RQCLayout{VT, PT, Symbol}) where {VT, PT} = update_id!(update_noise!(layout))
+function simplify!(layout::RQCLayout{VT, PT, Symbol}, cuts) where {VT, PT}
     for c in cuts
-        add_noise!(g, c[1], c[2])
+        add_noise!(layout, c[1], c[2])
     end
-    return simplify!(g)
+    return simplify!(layout)
 end
 
-function my_cut_53(d_start, d_end, nbits = 53, ncycle = 20)
-    g = google_layout_53(nbits, ncycle)
-    d_end > ncycle && (d_end = ncycle)
+function my_cut_53(cycle_start, cycle_end, nbits = 53, ncycles = 20)
+    layout = google_layout_53(nbits, ncycles)
+    cycle_end > ncycles && (cycle_end = ncycles)
     vs_cut = [1, 2, 4, 6, 11, 12, 47, 51]
-    filter!(x -> x <= nv(g), vs_cut)
+    filter!(x -> has_vertex(layout, x), vs_cut)
     cuts = []
-    for c in d_start:d_end
+    for c in cycle_start:cycle_end
         for v1 in vs_cut
-            v2 = partner(g, v1, c)
+            v2 = partner(layout, v1, c)
             if v2 in vs_cut && v1 < v2
                 push!(cuts, (v1, 2*(c-1)+1), (v2, 2*(c-1)+1))
             end
