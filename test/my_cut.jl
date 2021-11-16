@@ -8,9 +8,8 @@ L = sort!([52, 37, 35, 32, 22, 11, 31, 21, 8, 24, 7, 1,
 R = setdiff(1:53, L)
 
 g = google_layout_53(53, 20);
-cuts = XEB.my_cut_53(1, 20, 53, 20)
+cuts = XEB.generate_cut(g, L, 1, 20)
 XEB.simplify!(g, cuts);
-XEB.conn_comps(g)
 ec_L, ts_L, ids_size_L = to_ein_code(g, L)
 ec_R, ts_R, ids_size_R = to_ein_code(g, R)
 
@@ -43,8 +42,6 @@ for i = 1:100
     push!(xebs, xeb)
     println("$(i): XEB_L = $(mean(xebs_L)), XEB_R = $(mean(xebs_R))")
 end
-
-
 
 # q_remain = findall(!isequal(:noise), [gates(g, v)[end] for v = 1:nv(g)])
 # intersect(q_remain, L)
