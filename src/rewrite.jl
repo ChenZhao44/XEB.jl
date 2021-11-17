@@ -63,3 +63,10 @@ function simplify!(layout::RQCLayout{VT, PT, SCGate}, cuts) where {VT, PT}
     end
     return simplify!(layout)
 end
+
+function flux(g::RQCLayout{VT, PT, SCGate}, vs = collect(vertices(g))) where {VT, PT}
+    g = deepcopy(g)
+    update_noise!(g)
+    M = [gates(g, v)[i] !== Noise for v in vs, i in 1:depth(g)]
+    return minimum(sum(M, dims = 1))
+end

@@ -69,3 +69,8 @@ function partner(layout::RQCLayout, v, ncycles)
 end
 has_partner(g, v, ncycles) = (partner(g, v, ncycles) !== nothing)
 depth_to_cycle(d) = d÷2
+
+function depth(g::RQCLayout) 
+    v0 = first(keys(g.gates))
+    return length(gates(g, v0))
+end
