@@ -8,5 +8,6 @@ include("predefines.jl")
 include("rewrite.jl")
 include("cut.jl")
 include("ein_code.jl")
+include("plots.jl")
 
 end
