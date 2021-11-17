@@ -23,8 +23,8 @@ g_ustc = ustc_layout_60(60, D_ustc)
 cuts_ustc = XEB.generate_cut(g_ustc, L_ustc, 1, D_ustc)
 XEB.simplify!(g_ustc, cuts_ustc);
 connected_components(g_ustc)
-ec_L, ts_L, ids_size_L = to_ein_code(g_ustc, L_ustc)
-ec_R, ts_R, ids_size_R = to_ein_code(g_ustc, R_ustc)
+ec_L, ts_L, ids_size_L = to_ein_code(g_ustc, L_ustc; haar = true, enable_cuda = true)
+ec_R, ts_R, ids_size_R = to_ein_code(g_ustc, R_ustc; haar = true, enable_cuda = true)
 
 ec_L_greedy = optimize_code(ec_L, ids_size_L, GreedyMethod())
 ec_L_opt = optimize_code(ec_L_greedy, ids_size_L, TreeSA())
