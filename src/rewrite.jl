@@ -19,13 +19,16 @@ function update_noise!(layout::RQCLayout{VT, PT, SCGate}) where {VT, PT}
                     if gates_v[j] === FSim
                         u = partner(layout, v, depth_to_cycle(j))
                         gates_u = gates(layout, u)
-                        if Noise in (gates_u[i], gates_u[2j-i], gates_v[2j-i])
+                        if Noise in (gates_u[i], gates_v[2j-i])
                             gates_v[j] = Noise
                             gates_u[j] = Noise
+                            # u == 53 && println("FSim @ $(depth_to_cycle(j)) from $v")
+                            # v == 53 && println("FSim @ $(depth_to_cycle(j))")
                             to_update = true
                         end
                     elseif gates_v[j] in (Id, Single)
                         gates_v[j] = Noise
+                        # v == 53 && println("Single @ $(depth_to_cycle(j))")
                         to_update = true
                     end
                 end
