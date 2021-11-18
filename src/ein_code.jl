@@ -63,6 +63,12 @@ function tensor_fsim(; enable_cuda = false)
     return tf
 end
 
+"""
+    to_ein_code(layout, [s; haar = false, enable_cuda = false])
+
+Generate the tensor network description for `layout` on a subset `s`. If the is a FSim gate out side `s`, 
+it will be replaced by an identity gate.
+"""
 function to_ein_code(layout::RQCLayout{VT, PT, SCGate}, s = collect(vertices(layout)); haar = false, enable_cuda = false) where {VT, PT}
     layout = deepcopy(layout)
     simplify!(layout)

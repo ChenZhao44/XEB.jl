@@ -22,10 +22,14 @@ function plot(layout::RQCLayout{VT, PT, SCGate}, vs = collect(vertices(layout)))
                 ctx_gates = Compose.compose(ctx_gates, plot_single(x1, y1))
             elseif gates(layout, v)[d] === FSim
                 u = partner(layout, v, depth_to_cycle(d))
-                x2 = gate_locs[u][d]
-                y2 = qubit_map[u]
-                y1 < y2 || continue
-                ctx_gates = Compose.compose(ctx_gates, plot_fsim(x1, y1, x2, y2))
+                if u in vs
+                    x2 = gate_locs[u][d]
+                    y2 = qubit_map[u]
+                    y1 < y2 || continue
+                    ctx_gates = Compose.compose(ctx_gates, plot_fsim(x1, y1, x2, y2))
+                else
+                    ctx_gates = Compose.compose(ctx_gates, plot_fsim_one_side(x1, y1))
+                end
             end
         end
     end
@@ -54,14 +58,20 @@ function gen_gate_locs(layout::RQCLayout{VT, PT, SCGate}, vs = collect(vertices(
                 frontier[v] += 1
             else
                 u = partner(layout, v, depth_to_cycle(d))
-                qubit_map[u] > qubit_map[v] || continue
-                loc = max(frontier[u], frontier[v])
-                push!(gate_locs[u], loc)
-                push!(gate_locs[v], loc)
-                for w in vs
-                    if qubit_map[v] <= qubit_map[w] <= qubit_map[u]
-                        frontier[w] = loc + 1
+                if u in vs
+                    # @show u, depth_to_cycle(d)
+                    qubit_map[u] > qubit_map[v] || continue
+                    loc = max(frontier[u], frontier[v])
+                    push!(gate_locs[u], loc)
+                    push!(gate_locs[v], loc)
+                    for w in vs
+                        if qubit_map[v] <= qubit_map[w] <= qubit_map[u]
+                            frontier[w] = loc + 1
+                        end
                     end
+                else
+                    push!(gate_locs[v], frontier[v])
+                    frontier[v] += 1
                 end
             end
         end
@@ -73,8 +83,10 @@ plot_noise(x, y) = (Compose.context(), xgon(x, y, 0.25, 4),
     fill("red"), stroke("red"))
 plot_single(x, y) = (Compose.context(), rectangle(x-0.2, y-0.2, 0.4, 0.4), 
     fill("black"), stroke("black"))
+plot_fsim_one_side(x, y) = (Compose.context(), circle(x, y, 0.2), 
+    fill("green"), stroke("black"))
 plot_fsim(x1, y1, x2, y2) = (Compose.context(),
-    (Compose.context(), circle(x1, y1, 0.2), fill("black"), stroke("black")),
-    (Compose.context(), circle(x2, y2, 0.2), fill("black"), stroke("black")),
+    (Compose.context(), circle(x1, y1, 0.2), fill("white"), stroke("black")),
+    (Compose.context(), circle(x2, y2, 0.2), fill("white"), stroke("black")),
     (Compose.context(), line([(x1, y1), (x2, y2)]), stroke("black"), linewidth(2))
 )
