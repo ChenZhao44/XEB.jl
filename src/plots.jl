@@ -75,6 +75,7 @@ function gen_gate_locs(layout::RQCLayout{VT, PT, SCGate}, vs = collect(vertices(
                 end
             end
         end
+        
     end
     return gate_locs
 end

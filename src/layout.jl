@@ -28,6 +28,7 @@ RQCLayout{VT, PT, GT}(nbits::VT, edge_pattern::Dict{Edge{VT}, PT},
         pattern_loop::Vector{PT}) where {VT, PT, GT} = 
     RQCLayout{VT, PT, GT}(VT[i for i = 1:nbits], edge_pattern, pattern_loop)
 
+Base.copy(layout::RQCLayout) = deepcopy(layout)
 Base.deepcopy(layout::RQCLayout{VT, PT, GT}) where {VT, PT, GT} = 
     RQCLayout{VT, PT, GT}(deepcopy(layout.g), deepcopy(layout.edge_patterns), 
         deepcopy(layout.gates), deepcopy(layout.pattern_loop))
@@ -73,4 +74,9 @@ depth_to_cycle(d) = d÷2
 function depth(g::RQCLayout) 
     v0 = first(keys(g.gates))
     return length(gates(g, v0))
+end
+
+function flux(g::RQCLayout{VT, PT, SCGate}, vs = collect(vertices(g))) where {VT, PT}
+    M = [gates(g, v)[i] !== Noise for v in vs, i in 1:depth(g)]
+    return minimum(sum(M, dims = 1))
 end

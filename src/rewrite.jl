@@ -56,7 +56,7 @@ function update_id!(layout::RQCLayout{VT, PT, SCGate}) where {VT, PT}
     return layout
 end
 
-simplify!(layout::RQCLayout{VT, PT, SCGate}) where {VT, PT} = update_id!(update_noise!(layout))
+simplify!(layout::RQCLayout{VT, PT, SCGate}) where {VT, PT} = update_noise!(layout)
 function simplify!(layout::RQCLayout{VT, PT, SCGate}, cuts) where {VT, PT}
     for c in cuts
         add_noise!(layout, c[1], c[2])
@@ -64,9 +64,25 @@ function simplify!(layout::RQCLayout{VT, PT, SCGate}, cuts) where {VT, PT}
     return simplify!(layout)
 end
 
-function flux(g::RQCLayout{VT, PT, SCGate}, vs = collect(vertices(g))) where {VT, PT}
-    g = deepcopy(g)
-    update_noise!(g)
-    M = [gates(g, v)[i] !== Noise for v in vs, i in 1:depth(g)]
-    return minimum(sum(M, dims = 1))
+function add_noise_greedy!(layout::RQCLayout, vs = collect(vertices(layout)), 
+    flux_min = 15, out_min = 25)
+    update_noise!(layout)
+    to_update = true
+    while to_update
+        to_update = false
+        for d in 1:depth(layout), v in vs
+            if gates(layout, v)[d] in (Single, Id)
+                lo_new = copy(layout)
+                gates(lo_new, v)[d] = Noise
+                update_noise!(lo_new)
+                if flux(lo_new, vs) >= flux_min && 
+                        sum(gates(lo_new, v)[end] !== Noise for v in vs) >= out_min
+                    add_noise!(layout, v, d)
+                    update_noise!(layout)
+                    to_update = true
+                end
+            end
+        end
+    end
+    return layout
 end
