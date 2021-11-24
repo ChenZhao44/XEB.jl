@@ -1,3 +1,5 @@
+using IterTools
+
 function generate_cut(layout::RQCLayout, s, cycle_start, cycle_end)
     ncycles = length(gates(layout, 1)) ÷ 2
     vs = sort!(collect(vertices(layout)))
@@ -14,4 +16,20 @@ function generate_cut(layout::RQCLayout, s, cycle_start, cycle_end)
         end
     end
     return cuts
+end
+
+function gen_cut_info(layout::RQCLayout, vs_cut)
+    vs = collect(vertices(layout))
+    cuts_info = Dict{Vector{Int}, Tuple{Int, Int}}()
+    ncycle = depth_to_cycle(depth(layout))
+    for S in subsets(vs_cut)
+        L = setdiff(vs, S)
+        layout = google_layout_53(53, ncycle)
+        cuts = XEB.generate_cut(layout, L, 1, ncycle)
+        XEB.simplify!(layout, cuts);
+        
+        n_open = length(filter(v -> gates(layout, v)[end] !== XEB.Noise, L))
+        cuts_info[S] = (flux(layout, L), n_open)
+    end
+    return cuts_info
 end
