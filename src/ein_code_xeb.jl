@@ -5,7 +5,7 @@ function tensor_init_xeb(; enable_cuda = false)
 end
 
 function tensor_single_xeb(; enable_cuda = false)
-    tn = 1/4 * [1.0 1 1; 1 1 -1; 1 -1 1]
+    tn = 1/2 * [1.0 1 1; 1 1 -1; 1 -1 1]
     enable_cuda && return CuArray(tn)
     return tn
 end
@@ -17,12 +17,12 @@ function tensor_measure_xeb(; enable_cuda = false)
 end
 
 function tensor_id_xeb(; enable_cuda = false)
-    tn = [2.0 0 0; 0 2 0; 0 0 2]
+    tn = [1.0 0 0; 0 1 0; 0 0 1]
     enable_cuda && return CuArray(tn)
     return tn    
 end
 function tensor_noise_xeb(; enable_cuda = false)
-    tn = [1/2, 1/2, 0]
+    tn = [sqrt(1/2), 0, sqrt(1/2)]
     enable_cuda && return CuArray(tn)
     return tn
 end
@@ -30,10 +30,10 @@ end
 function tensor_fsim_xeb(; enable_cuda = false)
     tn = zeros(3, 3, 3, 3)
     for i = 1:3, j = 1:3
-        tn[i, j, j, i] = 4
+        tn[i, j, j, i] = 1.0
     end
-    tn[2, 3, 3, 2] = -sqrt(12)
-    tn[3, 2, 2, 3] = -sqrt(12)
+    tn[2, 3, 3, 2] = -sqrt(3)/2
+    tn[3, 2, 2, 3] = -sqrt(3)/2
     enable_cuda && return CuArray(tn)
     return tn
 end
@@ -56,9 +56,9 @@ function to_ein_code_xeb(layout::RQCLayout{VT, PT, SCGate}, s = collect(vertices
     tensors = Any[]
     for v in vs
         if gates(layout, v)[1] === Noise
-            push!(tensors, 2*tensor_noise_xeb(enable_cuda = enable_cuda))
+            push!(tensors, sqrt(1/2)*tensor_noise_xeb(enable_cuda = enable_cuda))
         else
-            push!(tensors, 2*tensor_init_xeb(enable_cuda = enable_cuda))
+            push!(tensors, tensor_init_xeb(enable_cuda = enable_cuda))
         end
     end
 
@@ -84,15 +84,8 @@ function to_ein_code_xeb(layout::RQCLayout{VT, PT, SCGate}, s = collect(vertices
             elseif gates(layout, v)[d] === Noise
                 max_id += 1
                 new_id_v = max_id
-                c1, c2 = 1.0, 1.0
-                d == 1 && (c2 = sqrt(2))
-                d == D && (c1 = sqrt(2))
-                (1 < d < D && gates(layout, v)[d-1] === Noise) && (c1 = sqrt(2))
-                (1 < d < D && gates(layout, v)[d+1] === Noise) && (c2 = sqrt(2))
-                (d > 1 && gates(layout, v)[d-1] === FSim) && (c1 = 1)
-                (d < D && gates(layout, v)[d+1] === FSim) && (c2 = 1)
 
-                push!(tensors, c1*tensor_noise_xeb(enable_cuda = enable_cuda), c2*tensor_noise_xeb(enable_cuda = enable_cuda))
+                push!(tensors, tensor_noise_xeb(enable_cuda = enable_cuda), tensor_noise_xeb(enable_cuda = enable_cuda))
                 push!(tensor_ids, [open_ids_dict[v]], [new_id_v])
                 ids_size[new_id_v] = 3
                 open_ids_dict[v] = new_id_v
