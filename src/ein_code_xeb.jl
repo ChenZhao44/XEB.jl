@@ -50,6 +50,7 @@ function to_ein_code_xeb(layout::RQCLayout{VT, PT, SCGate}, s = collect(vertices
     vs = sort!(intersect(s, collect(vertices(layout))))
     nbits = length(vs)
     ids_size = Dict{Int, Int}(i => 3 for i in 1:nbits)
+    ids_loc = Dict(i => (vs[i], 0) for i = 1:nbits)
     open_ids_dict = Dict(vs[i] => i for i = 1:nbits)
     tensor_ids = [[id] for id in 1:nbits]
     max_id = nbits
@@ -72,6 +73,7 @@ function to_ein_code_xeb(layout::RQCLayout{VT, PT, SCGate}, s = collect(vertices
                 push!(tensors, ts)
                 push!(tensor_ids, [open_ids_dict[v], new_id_v])
                 ids_size[new_id_v] = 3
+                ids_loc[new_id_v] = (v, d)
                 open_ids_dict[v] = new_id_v
             elseif gates(layout, v)[d] === Id
                 ts = tensor_id_xeb(; enable_cuda = enable_cuda)
@@ -80,6 +82,7 @@ function to_ein_code_xeb(layout::RQCLayout{VT, PT, SCGate}, s = collect(vertices
                 push!(tensors, ts)
                 push!(tensor_ids, [open_ids_dict[v], new_id_v])
                 ids_size[new_id_v] = 3
+                ids_loc[new_id_v] = (v, d)
                 open_ids_dict[v] = new_id_v
             elseif gates(layout, v)[d] === Noise
                 max_id += 1
@@ -88,6 +91,7 @@ function to_ein_code_xeb(layout::RQCLayout{VT, PT, SCGate}, s = collect(vertices
                 push!(tensors, tensor_noise_xeb(enable_cuda = enable_cuda), tensor_noise_xeb(enable_cuda = enable_cuda))
                 push!(tensor_ids, [open_ids_dict[v]], [new_id_v])
                 ids_size[new_id_v] = 3
+                ids_loc[new_id_v] = (v, d)
                 open_ids_dict[v] = new_id_v
             elseif gates(layout, v)[d] === FSim
                 c = depth_to_cycle(d)
@@ -100,6 +104,8 @@ function to_ein_code_xeb(layout::RQCLayout{VT, PT, SCGate}, s = collect(vertices
                     push!(tensor_ids, [open_ids_dict[u], open_ids_dict[v], new_id_u, new_id_v])
                     ids_size[new_id_u] = 3
                     ids_size[new_id_v] = 3
+                    ids_loc[new_id_u] = (u, d)
+                    ids_loc[new_id_v] = (v, d)
                     open_ids_dict[u] = new_id_u
                     open_ids_dict[v] = new_id_v
                 end
@@ -117,5 +123,5 @@ function to_ein_code_xeb(layout::RQCLayout{VT, PT, SCGate}, s = collect(vertices
         open_ids_dict[v] > 0 && push!(open_ids, open_ids_dict[v])
     end
     # return tensor_ids, open_ids
-    return EinCode(tensor_ids, open_ids), tensors, ids_size
+    return EinCode(tensor_ids, open_ids), tensors, ids_size, ids_loc
 end

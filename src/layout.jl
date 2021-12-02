@@ -13,25 +13,26 @@ struct RQCLayout{VT, PT, GT}
     edge_patterns::Dict{Edge{VT}, PT}
     gates::Dict{VT, Vector{GT}}
     pattern_loop::Vector{PT}
+    qubit_locs::Dict{VT, Tuple{Float64, Float64}}
 end
 
-function RQCLayout{VT, PT, GT}(vs::Vector{VT}, edge_pattern::Dict{Edge{VT}, PT}, 
-        pattern_loop::Vector{PT}) where {VT, PT, GT}
+function RQCLayout{VT, PT, GT}(vs::Vector{VT}, edge_pattern::Dict{Edge{VT}, PT}, pattern_loop::Vector{PT}, 
+        qubit_locs::Dict{VT, Tuple{Float64, Float64}} = Dict{VT, Tuple{Float64, Float64}}()) where {VT, PT, GT}
     g = Multigraph{VT}(Dict(v => VT[] for v in vs), maximum(vs))
     for (e, et) in edge_pattern
         add_edge!(g, e)
     end
     gates = Dict(v => GT[] for v in vertices(g))
-    return RQCLayout{VT, PT, GT}(g, edge_pattern, gates, pattern_loop)
+    return RQCLayout{VT, PT, GT}(g, edge_pattern, gates, pattern_loop, qubit_locs)
 end
-RQCLayout{VT, PT, GT}(nbits::VT, edge_pattern::Dict{Edge{VT}, PT}, 
-        pattern_loop::Vector{PT}) where {VT, PT, GT} = 
-    RQCLayout{VT, PT, GT}(VT[i for i = 1:nbits], edge_pattern, pattern_loop)
+RQCLayout{VT, PT, GT}(nbits::VT, edge_pattern::Dict{Edge{VT}, PT}, pattern_loop::Vector{PT},
+        qubit_locs::Dict{VT, Tuple{Float64, Float64}} = Dict{VT, Tuple{Float64, Float64}}()) where {VT, PT, GT} = 
+    RQCLayout{VT, PT, GT}(VT[i for i = 1:nbits], edge_pattern, pattern_loop, qubit_locs)
 
 Base.copy(layout::RQCLayout) = deepcopy(layout)
 Base.deepcopy(layout::RQCLayout{VT, PT, GT}) where {VT, PT, GT} = 
     RQCLayout{VT, PT, GT}(deepcopy(layout.g), deepcopy(layout.edge_patterns), 
-        deepcopy(layout.gates), deepcopy(layout.pattern_loop))
+        deepcopy(layout.gates), deepcopy(layout.pattern_loop), deepcopy(layout.qubit_locs))
 Graphs.vertices(layout::RQCLayout) = vertices(layout.g)
 Graphs.has_vertex(layout::RQCLayout, v) = has_vertex(layout.g, v)
 Graphs.neighbors(layout::RQCLayout, v) = neighbors(layout.g, v)

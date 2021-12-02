@@ -10,7 +10,9 @@ include("rewrite.jl")
 include("cut.jl")
 include("ein_code_pauli.jl")
 include("ein_code_xeb.jl")
+include("utils.jl")
 include("yao_block.jl")
 include("plots.jl")
+include("plot3d.jl")
 
 end

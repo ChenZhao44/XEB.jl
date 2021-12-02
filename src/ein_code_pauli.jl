@@ -75,6 +75,7 @@ function to_ein_code_pauli(layout::RQCLayout{VT, PT, SCGate}, s = collect(vertic
     vs = sort!(intersect(s, collect(vertices(layout))))
     nbits = length(vs)
     ids_size = Dict{Int, Int}(i => 4 for i in 1:nbits)
+    ids_loc = Dict(i => (vs[i], 0) for i in 1:nbits)
     open_ids_dict = Dict(vs[i] => i for i = 1:nbits)
     tensor_ids = [[id] for id in 1:nbits]
     max_id = nbits
@@ -98,6 +99,7 @@ function to_ein_code_pauli(layout::RQCLayout{VT, PT, SCGate}, s = collect(vertic
                 push!(tensors, ts)
                 push!(tensor_ids, [open_ids_dict[v], new_id_v])
                 ids_size[new_id_v] = 4
+                ids_loc[new_id_v] = (v, d)
                 open_ids_dict[v] = new_id_v
             elseif gates(layout, v)[d] === Noise && d < D
                 max_id += 1
@@ -105,6 +107,7 @@ function to_ein_code_pauli(layout::RQCLayout{VT, PT, SCGate}, s = collect(vertic
                 push!(tensors, tensor_noise_pauli(enable_cuda = enable_cuda), tensor_noise_pauli(enable_cuda = enable_cuda))
                 push!(tensor_ids, [open_ids_dict[v]], [new_id_v])
                 ids_size[new_id_v] = 4
+                ids_loc[new_id_v] = (v, d)
                 open_ids_dict[v] = new_id_v
             elseif gates(layout, v)[d] === FSim
                 c = depth_to_cycle(d)
@@ -117,6 +120,8 @@ function to_ein_code_pauli(layout::RQCLayout{VT, PT, SCGate}, s = collect(vertic
                     push!(tensor_ids, [open_ids_dict[u], open_ids_dict[v], new_id_u, new_id_v])
                     ids_size[new_id_u] = 4
                     ids_size[new_id_v] = 4
+                    ids_loc[new_id_u] = (u, d)
+                    ids_loc[new_id_v] = (v, d)
                     open_ids_dict[u] = new_id_u
                     open_ids_dict[v] = new_id_v
                 end
@@ -134,6 +139,7 @@ function to_ein_code_pauli(layout::RQCLayout{VT, PT, SCGate}, s = collect(vertic
             push!(tensors, tensor_measure_pauli(enable_cuda = enable_cuda))
             push!(tensor_ids, [open_ids_dict[v], new_id_v])
             ids_size[new_id_v] = 2
+            ids_loc[new_id_v] = (v, D)
             open_ids_dict[v] = new_id_v
         end
     end
@@ -143,5 +149,5 @@ function to_ein_code_pauli(layout::RQCLayout{VT, PT, SCGate}, s = collect(vertic
         open_ids_dict[v] > 0 && push!(open_ids, open_ids_dict[v])
     end
     # return tensor_ids, open_ids
-    return EinCode(tensor_ids, open_ids), tensors, ids_size
+    return EinCode(tensor_ids, open_ids), tensors, ids_size, ids_loc
 end
