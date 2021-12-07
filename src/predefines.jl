@@ -1,3 +1,35 @@
+function brick_layout(nbits::VT, ncycles::Integer) where {VT}
+    edge_patterns = Dict{Edge{VT}, Symbol}()
+    pattern_loop = [:A, :B]
+    
+    for i = 1:nbits-1
+        if i % 2 == 0
+            edge_patterns[Edge(i, i+1)] = :B
+        else
+            edge_patterns[Edge(i, i+1)] = :A
+        end
+    end
+    qubit_locs = Dict{VT, Tuple{Float64, Float64}}()
+    
+    layout = RQCLayout{VT, Symbol, SCGate}(nbits, edge_patterns, pattern_loop, qubit_locs)
+    if ncycles >= 1
+        for i = 1:ncycles
+            for v in vertices(layout)
+                push!(gates(layout, v), Single)
+                if has_partner(layout, v, i)
+                    push!(gates(layout, v), FSim)
+                else
+                    push!(gates(layout, v), Id)
+                end
+            end
+        end
+    end
+    for v in vertices(layout)
+        push!(gates(layout, v), Single)
+    end
+    return layout
+end
+
 function google_layout_53(nbits::VT = 53, ncycles::Integer = 20) where {VT}
     edge_patterns = Dict{Edge{VT}, Symbol}()
     pattern_A = ((31,32),(21,22),(8,11),(24,29),(7,18),(1,5),(26,40),(15,25),
@@ -49,6 +81,100 @@ function google_layout_53(nbits::VT = 53, ncycles::Integer = 20) where {VT}
     )
     
     layout = RQCLayout{VT, Symbol, SCGate}(nbits, edge_patterns, pattern_loop, qubit_locs)
+    if ncycles >= 1
+        for i = 1:ncycles
+            for v in vertices(layout)
+                push!(gates(layout, v), Single)
+                if has_partner(layout, v, i)
+                    push!(gates(layout, v), FSim)
+                else
+                    push!(gates(layout, v), Id)
+                end
+            end
+        end
+    end
+    for v in vertices(layout)
+        push!(gates(layout, v), Single)
+    end
+    return layout
+end
+
+function square_layout(nbits::VT = 53, ncycles::Integer = 20, width = 10; start_with_zero = false) where {VT}
+    edge_patterns = Dict{Edge{VT}, Symbol}()
+    pattern_A = Tuple{Int,Int}[]
+    pattern_B = Tuple{Int,Int}[]
+    pattern_C = Tuple{Int,Int}[]
+    pattern_D = Tuple{Int,Int}[]
+    qubit_locs = Dict{VT, Tuple{Float64, Float64}}()
+    if width % 2 == 0
+        for i = 0:(nbits ÷ width)
+            for j = 0:(width-1)
+                if i == 0
+                    j % 2 == 0 && (start_with_zero || j > 0) && push!(pattern_B, (j, j+1))
+                    j % 2 == 1 && j < (width-1) && push!(pattern_D, (j, j+1))
+                elseif i % 2 == 0
+                    j % 2 == 0 && push!(pattern_B, (i*width-j-2, i*width+j))
+                    j % 2 == 0 && j > 0 && push!(pattern_D, (i*width-j, i*width+j))
+                    j % 2 == 1 && push!(pattern_B, (i*width-j, i*width+j))
+                    j % 2 == 1 && j < (width-1) && push!(pattern_D, (i*width-j-2, i*width+j))
+                elseif i % 2 == 1
+                    j % 2 == 0 && push!(pattern_C, (i*width-j-2, i*width+j))
+                    j % 2 == 0 && j > 0 && push!(pattern_A, (i*width-j, i*width+j))
+                    j % 2 == 1 && push!(pattern_C, (i*width-j, i*width+j))
+                    j % 2 == 1 && j < (width-1) && push!(pattern_A, (i*width-j-2, i*width+j))
+                end
+                i % 2 == 0 && j % 2 == 0 && (qubit_locs[i*width+j] = (j, i+0.5))
+                i % 2 == 0 && j % 2 == 1 && (qubit_locs[i*width+j] = (j, -i-0.5))
+                i % 2 == 1 && j % 2 == 0 && (qubit_locs[i*width+j] = (width-j-1, i+0.5))
+                i % 2 == 1 && j % 2 == 1 && (qubit_locs[i*width+j] = (width-j-1, -i-0.5))
+            end
+        end
+    else
+        for i = 0:(nbits ÷ width)
+            for j = 0:(width-1)
+                if i == 0
+                    j % 2 == 0 && j < (width-1) && (start_with_zero || j > 0) && push!(pattern_B, (j, j+1))
+                    j % 2 == 1 && push!(pattern_D, (j, j+1))
+                elseif i % 2 == 0
+                    j % 2 == 0 && j < (width-1) && push!(pattern_B, (i*width-j-2, i*width+j))
+                    j % 2 == 0 && j > 0 && push!(pattern_D, (i*width-j, i*width+j))
+                    j % 2 == 1 && push!(pattern_B, (i*width-j, i*width+j))
+                    j % 2 == 1 && j < (width-1) && push!(pattern_D, (i*width-j-2, i*width+j))
+                elseif i % 2 == 1
+                    j % 2 == 0 && j > 0 && push!(pattern_C, (i*width-j, i*width+j))
+                    j % 2 == 0 && j < (width-1) && push!(pattern_A, (i*width-j-2, i*width+j))
+                    j % 2 == 1 && push!(pattern_C, (i*width-j-2, i*width+j))
+                    j % 2 == 1 && push!(pattern_A, (i*width-j, i*width+j))
+                end
+                i % 2 == 0 && j % 2 == 0 && (qubit_locs[i*width+j] = (j, i+0.5))
+                i % 2 == 0 && j % 2 == 1 && (qubit_locs[i*width+j] = (j, -i-0.5))
+                i % 2 == 1 && j % 2 == 0 && (qubit_locs[i*width+j] = (width-j-1, -i-0.5))
+                i % 2 == 1 && j % 2 == 1 && (qubit_locs[i*width+j] = (width-j-1, i+0.5))
+            end
+        end
+    end
+    
+    pattern_loop = [:A, :B, :C, :D, :C, :D, :A, :B]
+    
+    for e in pattern_A
+        e[1] < e[2] || error("$e")
+        edge_patterns[Edge(e)] = :A
+    end
+    for e in pattern_B
+        e[1] < e[2] || error("$e")
+        edge_patterns[Edge(e)] = :B
+    end
+    for e in pattern_C
+        e[1] < e[2] || error("$e")
+        edge_patterns[Edge(e)] = :C
+    end
+    for e in pattern_D
+        e[1] < e[2] || error("$e")
+        edge_patterns[Edge(e)] = :D
+    end
+    
+    bits = start_with_zero ? (0:nbits-1) : (1:nbits)
+    layout = RQCLayout{VT, Symbol, SCGate}(collect(bits), edge_patterns, pattern_loop, qubit_locs)
     if ncycles >= 1
         for i = 1:ncycles
             for v in vertices(layout)
