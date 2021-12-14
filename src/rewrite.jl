@@ -6,7 +6,7 @@ function add_noise!(layout::RQCLayout{VT, PT, SCGate}, v, d) where {VT, PT}
     return false
 end
 
-function update_noise!(layout::RQCLayout{VT, PT, SCGate}) where {VT, PT}
+function update_noise!(layout::RQCLayout{VT, PT, SCGate}; approx = false) where {VT, PT}
     to_update = true
     while to_update
         to_update = false
@@ -19,7 +19,7 @@ function update_noise!(layout::RQCLayout{VT, PT, SCGate}) where {VT, PT}
                     if gates_v[j] === FSim
                         u = partner(layout, v, depth_to_cycle(j))
                         gates_u = gates(layout, u)
-                        if Noise in (gates_u[i], gates_v[2j-i])
+                        if Noise in (approx ? (gates_u[i], gates_v[2j-i], gates_u[2j-i]) : (gates_u[i], gates_v[2j-i]))
                             gates_v[j] = Noise
                             gates_u[j] = Noise
                             # u == 53 && println("FSim @ $(depth_to_cycle(j)) from $v")
@@ -56,12 +56,12 @@ function update_id!(layout::RQCLayout{VT, PT, SCGate}) where {VT, PT}
     return layout
 end
 
-simplify!(layout::RQCLayout{VT, PT, SCGate}) where {VT, PT} = update_noise!(layout)
-function simplify!(layout::RQCLayout{VT, PT, SCGate}, cuts) where {VT, PT}
+simplify!(layout::RQCLayout{VT, PT, SCGate}; approx = false) where {VT, PT} = update_noise!(layout; approx = approx)
+function simplify!(layout::RQCLayout{VT, PT, SCGate}, cuts; approx = false) where {VT, PT}
     for c in cuts
         add_noise!(layout, c[1], c[2])
     end
-    return simplify!(layout)
+    return simplify!(layout; approx = approx)
 end
 
 function add_noise_greedy!(layout::RQCLayout, vs = collect(vertices(layout)), 
