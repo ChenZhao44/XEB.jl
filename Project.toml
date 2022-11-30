@@ -17,12 +17,9 @@ OMEinsum = "ebe7aa44-baf0-506c-a96f-8464559b3922"
 OMEinsumContractionOrders = "6f22d1fd-8eed-4bb7-9776-e7d684900715"
 RandomMatrices = "2576dda1-a324-5b11-aa66-c48ed7e3c618"
 Yao = "5872b779-8223-5990-8dd0-5abbb0748c8c"
-YaoExtensions = "7a06699c-c960-11e9-3c98-9f78548b5f0f"
 
 [compat]
 Multigraphs = "0.3"
-OMEinsumContractionOrders = "0.5.1, 0.6"
-YaoExtensions = "0.2"
 julia = "1.7"
 
 [extras]

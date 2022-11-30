@@ -1,4 +1,4 @@
-using IterTools
+using IterTools: subsets
 
 function generate_cut(layout::RQCLayout, s, cycle_start, cycle_end)
     ncycles = length(gates(layout, 1)) ÷ 2

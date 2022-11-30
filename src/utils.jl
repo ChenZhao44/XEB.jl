@@ -23,3 +23,16 @@ function max_space_ids(ec::NestedEinsum{OMEinsum.DynamicEinCode{Int}}, ids_dic)
     return copy(max_ids)
 end
 space_complexity(ids::Vector{Int}, ids_dic) = isempty(ids) ? -Inf : sum(log2(ids_dic[i]) for i in ids)
+
+function n_noise(l::RQCLayout{VT, PT, SCGate}) where {VT, PT}
+    D = depth(l)
+    nn = 0
+    for v in vertices(l)
+        for d = 1:D
+            if gates(l, v)[d] === Noise && (d == 1 || gates(l, v)[d-1] !== Noise)
+                nn += 1
+            end
+        end
+    end
+    return nn
+end
