@@ -1,5 +1,3 @@
-using Yao, Yao.EasyBuild
-
 @const_gate sqrtX = ComplexF64[0.5+0.5im 0.5-0.5im; 0.5-0.5im 0.5+0.5im]
 @const_gate sqrtY = ComplexF64[0.5+0.5im -0.5-0.5im; 0.5+0.5im 0.5+0.5im]
 @const_gate sqrtW = ComplexF64[0.5+0.5im -sqrt(1/2)*im; sqrt(1/2) 0.5+0.5im]

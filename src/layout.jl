@@ -1,7 +1,3 @@
-using LinearAlgebra
-using Multigraphs, Graphs
-using OMEinsum
-
 @enum SCGate begin 
     Single
     FSim

@@ -1,6 +1,3 @@
-using RandomMatrices
-using CUDA
-
 function tensor_init_pauli(; enable_cuda = false)
     tn = Float64[1, 0, 0, 1] / sqrt(2)
     enable_cuda && return CuArray(tn)
