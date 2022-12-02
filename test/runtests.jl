@@ -1,6 +1,10 @@
 using XEB
 using Test
 
-@testset "XEB.jl" begin
-    # Write your tests here.
+@testset "rewrite.jl" begin
+    include("rewrite.jl")
+end
+
+@testset "Tensor networks" begin
+    include("tensor_networks.jl")
 end

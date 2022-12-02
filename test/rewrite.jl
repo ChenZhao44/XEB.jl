@@ -1,5 +1,6 @@
 using Test
 using XEB
+using XEB: Noise
 
 @testset "Rule-1" begin
     g = google_layout_53(2, 20)
